@@ -10,7 +10,8 @@ import rclpy
 import os
 import time
 
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "altair_core"))
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.extend([_root, os.path.join(_root, "altair_core")])
 from altair_core.base_behavior import AltairBehavior
 
 class BlocklyBehavior(AltairBehavior):
@@ -26,10 +27,88 @@ class BlocklyBehavior(AltairBehavior):
         try:
             print("--- Blocklyマクロの実行を開始します ---")
             while True:
-                if self.gamepad.get_button(7) == True:
-                    self.get_module("MDD1").set_targets([1, 0, 0, 0])
-                else:
-                    self.get_module("MDD1").set_targets([0, 0, 0, 0])
+
+                # 運動学計算実行
+                def _calc_kinematics():
+                    import math
+                    vx_val = float((self.gamepad.get_axis(0) * 1000)) / 1000.0
+                    vy_val = float((self.gamepad.get_axis(1) * 1000)) / 1000.0
+                    omega_val = float((self.gamepad.get_axis(2) * 2))
+
+                    r_t = 300 / 2000.0
+
+                    def get_dia(m_name):
+                        if m_name == 'none': return 100.0
+                        for m in self.config.get('modules', []):
+                            if m.get('name') == "MDD1":
+                                return m.get('parameters', {}).get(m_name, {}).get('diameter', 100.0)
+                        return 100.0
+
+                    dia_lf = get_dia("m2")
+                    dia_rf = get_dia("m3")
+                    dia_lr = get_dia("m1")
+                    dia_rr = get_dia("m4")
+
+                    k_lf = 1000.0 / (math.pi * dia_lf) if dia_lf > 0 else 1.0
+                    k_rf = 1000.0 / (math.pi * dia_rf) if dia_rf > 0 else 1.0
+                    k_lr = 1000.0 / (math.pi * dia_lr) if dia_lr > 0 else 1.0
+                    k_rr = 1000.0 / (math.pi * dia_rr) if dia_rr > 0 else 1.0
+
+                    target_speeds = [0.0, 0.0, 0.0, 0.0]
+
+                    if "4_MECANUM" == "3_OMNI":
+                        v1 = (vy_val + r_t * omega_val) * 1.0
+                        v2 = (-0.866025 * vx_val - 0.5 * vy_val + r_t * omega_val) * 1.0
+                        v3 = (0.866025 * vx_val - 0.5 * vy_val + r_t * omega_val) * 1.0
+
+                        for slot, val in [("m2", v1 * k_lf), ("m3", v2 * k_rf), ("m1", v3 * k_lr)]:
+                            if slot != 'none':
+                                idx = int(slot[1]) - 1
+                                target_speeds[idx] = val
+
+                    elif "4_MECANUM" == "4_OMNI":
+                        v_lf = (-0.707107 * vx_val + 0.707107 * vy_val - r_t * omega_val) * 1.0
+                        v_rf = (0.707107 * vx_val + 0.707107 * vy_val + r_t * omega_val) * 1.0
+                        v_lr = (-0.707107 * vx_val - 0.707107 * vy_val + r_t * omega_val) * 1.0
+                        v_rr = (0.707107 * vx_val - 0.707107 * vy_val - r_t * omega_val) * 1.0
+
+                        for slot, val in [("m2", v_lf * k_lf), ("m3", v_rf * k_rf), ("m1", v_lr * k_lr), ("m4", v_rr * k_rr)]:
+                            if slot != 'none':
+                                idx = int(slot[1]) - 1
+                                target_speeds[idx] = val
+
+                    elif "4_MECANUM" == "4_MECANUM":
+                        v_lf = (vy_val - vx_val - r_t * omega_val) * 1.0
+                        v_rf = (vy_val + vx_val + r_t * omega_val) * 1.0
+                        v_lr = (vy_val + vx_val - r_t * omega_val) * 1.0
+                        v_rr = (vy_val - vx_val + r_t * omega_val) * 1.0
+
+                        for slot, val in [("m2", v_lf * k_lf), ("m3", v_rf * k_rf), ("m1", v_lr * k_lr), ("m4", v_rr * k_rr)]:
+                            if slot != 'none':
+                                idx = int(slot[1]) - 1
+                                target_speeds[idx] = val
+
+                    elif "4_MECANUM" == "2_DIFF":
+                        v_l = vy_val - r_t * omega_val
+                        v_r = vy_val + r_t * omega_val
+
+                        for slot, val in [("m2", v_l * k_lf * 1.0), ("m1", v_l * k_lr * 1.0)]:
+                            if slot != 'none':
+                                idx = int(slot[1]) - 1
+                                target_speeds[idx] = val
+                        for slot, val in [("m3", v_r * k_rf * 1.0), ("m4", v_r * k_rr * 1.0)]:
+                            if slot != 'none':
+                                idx = int(slot[1]) - 1
+                                target_speeds[idx] = val
+
+                    self.get_module("MDD1").set_targets(target_speeds)
+
+                _calc_kinematics()
+
+            if self.gamepad.get_button(7) == True:
+                pass
+            else:
+                pass
 
             print("--- Blocklyマクロの実行が完了しました ---")
         except Exception as e:
@@ -40,7 +119,7 @@ class BlocklyBehavior(AltairBehavior):
 def main(args=None):
     rclpy.init(args=args)
     behavior = BlocklyBehavior("blockly_behavior_node")
-    behavior.run(rate_hz=100.0)
+    behavior.run(rate_hz=500.0)
 
 if __name__ == '__main__':
     main()
