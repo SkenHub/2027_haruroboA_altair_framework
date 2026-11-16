@@ -44,9 +44,9 @@ class BlocklyBehavior(AltairBehavior):
                                 return m.get('parameters', {}).get(m_name, {}).get('diameter', 100.0)
                         return 100.0
 
-                    dia_lf = get_dia("m2")
-                    dia_rf = get_dia("m3")
-                    dia_lr = get_dia("m1")
+                    dia_lf = get_dia("m1")
+                    dia_rf = get_dia("m2")
+                    dia_lr = get_dia("m3")
                     dia_rr = get_dia("m4")
 
                     k_lf = 1000.0 / (math.pi * dia_lf) if dia_lf > 0 else 1.0
@@ -61,7 +61,7 @@ class BlocklyBehavior(AltairBehavior):
                         v2 = (-0.866025 * vx_val - 0.5 * vy_val + r_t * omega_val) * 1.0
                         v3 = (0.866025 * vx_val - 0.5 * vy_val + r_t * omega_val) * 1.0
 
-                        for slot, val in [("m2", v1 * k_lf), ("m3", v2 * k_rf), ("m1", v3 * k_lr)]:
+                        for slot, val in [("m1", v1 * k_lf), ("m2", v2 * k_rf), ("m3", v3 * k_lr)]:
                             if slot != 'none':
                                 idx = int(slot[1]) - 1
                                 target_speeds[idx] = val
@@ -72,7 +72,7 @@ class BlocklyBehavior(AltairBehavior):
                         v_lr = (-0.707107 * vx_val - 0.707107 * vy_val + r_t * omega_val) * 1.0
                         v_rr = (0.707107 * vx_val - 0.707107 * vy_val - r_t * omega_val) * 1.0
 
-                        for slot, val in [("m2", v_lf * k_lf), ("m3", v_rf * k_rf), ("m1", v_lr * k_lr), ("m4", v_rr * k_rr)]:
+                        for slot, val in [("m1", v_lf * k_lf), ("m2", v_rf * k_rf), ("m3", v_lr * k_lr), ("m4", v_rr * k_rr)]:
                             if slot != 'none':
                                 idx = int(slot[1]) - 1
                                 target_speeds[idx] = val
@@ -83,7 +83,7 @@ class BlocklyBehavior(AltairBehavior):
                         v_lr = (vy_val + vx_val - r_t * omega_val) * 1.0
                         v_rr = (vy_val - vx_val + r_t * omega_val) * 1.0
 
-                        for slot, val in [("m2", v_lf * k_lf), ("m3", v_rf * k_rf), ("m1", v_lr * k_lr), ("m4", v_rr * k_rr)]:
+                        for slot, val in [("m1", v_lf * k_lf), ("m2", v_rf * k_rf), ("m3", v_lr * k_lr), ("m4", v_rr * k_rr)]:
                             if slot != 'none':
                                 idx = int(slot[1]) - 1
                                 target_speeds[idx] = val
@@ -92,11 +92,11 @@ class BlocklyBehavior(AltairBehavior):
                         v_l = vy_val - r_t * omega_val
                         v_r = vy_val + r_t * omega_val
 
-                        for slot, val in [("m2", v_l * k_lf * 1.0), ("m1", v_l * k_lr * 1.0)]:
+                        for slot, val in [("m1", v_l * k_lf * 1.0), ("m3", v_l * k_lr * 1.0)]:
                             if slot != 'none':
                                 idx = int(slot[1]) - 1
                                 target_speeds[idx] = val
-                        for slot, val in [("m3", v_r * k_rf * 1.0), ("m4", v_r * k_rr * 1.0)]:
+                        for slot, val in [("m2", v_r * k_rf * 1.0), ("m4", v_r * k_rr * 1.0)]:
                             if slot != 'none':
                                 idx = int(slot[1]) - 1
                                 target_speeds[idx] = val
